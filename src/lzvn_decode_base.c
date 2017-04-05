@@ -709,3 +709,25 @@ invalid_match_distance:
   }
 #endif
 }
+
+size_t lzvn_decode_buffer(void *__restrict dst, size_t dst_size,
+                          const void *__restrict src, size_t src_size) {
+  // Init LZVN decoder state
+  lzvn_decoder_state dstate;
+  memset(&dstate, 0x00, sizeof(dstate));
+  dstate.src = src;
+  dstate.src_end = src + src_size;
+
+  dstate.dst_begin = dst;
+  dstate.dst = dst;
+  dstate.dst_end = dst + dst_size;
+
+  dstate.d_prev = 0;
+  dstate.end_of_stream = 0;
+
+  // Run LZVN decoder
+  lzvn_decode(&dstate);
+
+  // This is how much we decompressed
+  return dstate.dst - (unsigned char*) dst;
+}

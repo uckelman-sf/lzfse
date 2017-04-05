@@ -21,6 +21,7 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
 
 // LZVN low-level encoder
 
+#include "lzvn.h"
 #include "lzvn_encode_base.h"
 
 #if defined(_MSC_VER) && !defined(__clang__)
