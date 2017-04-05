@@ -26,6 +26,8 @@ BUILD_DIR := ./build
 BIN_DIR := $(BUILD_DIR)/bin
 OBJ_DIR := $(BUILD_DIR)/obj
 
+LZFSE_SHARED_LIB := $(BIN_DIR)/liblzfse.so
+#LZFSE_SHARED_LIB := $(BIN_DIR)/liblzfse.dll
 LZFSE_LIB := $(BIN_DIR)/liblzfse.a
 LZFSE_CMD := $(BIN_DIR)/lzfse
 LIB_OBJS := $(OBJ_DIR)/lzfse_encode.o  $(OBJ_DIR)/lzfse_decode.o \
@@ -33,28 +35,45 @@ LIB_OBJS := $(OBJ_DIR)/lzfse_encode.o  $(OBJ_DIR)/lzfse_decode.o \
             $(OBJ_DIR)/lzvn_encode_base.o $(OBJ_DIR)/lzvn_decode_base.o \
             $(OBJ_DIR)/lzfse_fse.o
 CMD_OBJS := $(OBJ_DIR)/lzfse_main.o
-OBJS := $(LIB_OBJS) $(CMD_OBJS)
+OBJS := $(LIB_OBJS) $(CMD_OBJS) $(LZVN_CMD_OBJS)
 
-CFLAGS := -Os -Wall -Wno-unknown-pragmas -Wno-unused-variable -DNDEBUG -D_POSIX_C_SOURCE -std=c99 -fvisibility=hidden
+LZVN_CMD := $(BIN_DIR)/lzvn
+LZVN_CMD_OBJS := $(OBJ_DIR)/lzvn_main.o
 
-all: $(LZFSE_LIB) $(LZFSE_CMD) $(OBJS)
+#CFLAGS := -Os -Wall -Wno-unknown-pragmas -Wno-unused-variable -DNDEBUG -D_POSIX_C_SOURCE -std=c99 -fvisibility=hidden -fPIC
+CFLAGS := -Os -Wall -Wno-unknown-pragmas -Wno-unused-variable -DNDEBUG -D_POSIX_C_SOURCE -std=c99 -fPIC
+
+CXXFLAGS := -O0 -Wall -Wextra -Wpedantic -std=c++14 -DNDEBUG -D_POSIX_C_SOURCE
+
+#all: $(LZFSE_LIB) $(LZFSE_SHARED_LIB) $(LZFSE_CMD) $(LZVN_CMD) $(OBJS)
+all: $(LZFSE_LIB) $(LZFSE_SHARED_LIB) $(LZFSE_CMD) $(OBJS)
 
 install: $(LZFSE_LIB) $(LZFSE_CMD)
 	@[ -d $(INSTALL_PREFIX)/include ] || mkdir -p $(INSTALL_PREFIX)/include
 	@[ -d $(INSTALL_PREFIX)/lib ] || mkdir -p $(INSTALL_PREFIX)/lib
 	@[ -d $(INSTALL_PREFIX)/bin ] || mkdir -p $(INSTALL_PREFIX)/bin
 	install ./src/lzfse.h $(INSTALL_PREFIX)/include/lzfse.h
+	install ./src/lzvn.h $(INSTALL_PREFIX)/include/lzvn.h
 	install $(LZFSE_LIB) $(INSTALL_PREFIX)/lib/liblzfse.a
 	install $(LZFSE_CMD) $(INSTALL_PREFIX)/bin/lzfse
+
+$(LZFSE_SHARED_LIB): $(LIB_OBJS)
+	@[ -d $(BIN_DIR) ] || mkdir -p $(BIN_DIR)
+	$(CC) $(CFLAGS) -shared -o $@ $(LIB_OBJS)
+#	$(CC) $(CFLAGS) -shared -o $@ $(LIB_OBJS) -Xlinker --out-implib -Xlinker $@.a
 
 $(LZFSE_LIB): $(LIB_OBJS)
 	@[ -d $(BIN_DIR) ] || mkdir -p $(BIN_DIR)
 	$(LD) -r -o $(OBJ_DIR)/liblzfse_master.o $(LIB_OBJS)
-	ar rvs $@ $(OBJ_DIR)/liblzfse_master.o
+	$(AR) rvs $@ $(OBJ_DIR)/liblzfse_master.o
 
 $(LZFSE_CMD): $(CMD_OBJS) $(LZFSE_LIB)
 	@[ -d $(BIN_DIR) ] || mkdir -p $(BIN_DIR)
 	$(CC) $(CFLAGS) -o $@ $(CMD_OBJS) $(LZFSE_LIB)
+
+$(LZVN_CMD): $(LZVN_CMD_OBJS) $(LZFSE_LIB)
+	@[ -d $(BIN_DIR) ] || mkdir -p $(BIN_DIR)
+	$(CC) $(CXXFLAGS) -o $@ $(LZVN_CMD_OBJS) $(LZFSE_LIB) -lstdc++
 
 clean:
 	/bin/rm -rf $(BUILD_DIR)
@@ -62,3 +81,7 @@ clean:
 $(OBJ_DIR)/%.o: src/%.c
 	@[ -d $(OBJ_DIR) ] || mkdir -p $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJ_DIR)/%.o: src/%.cpp
+	@[ -d $(OBJ_DIR) ] || mkdir -p $(OBJ_DIR)
+	$(CC) $(CXXFLAGS) -c $< -o $@
